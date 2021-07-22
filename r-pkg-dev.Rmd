@@ -1,0 +1,439 @@
+---
+title: "R package development"
+author: "RS-eco"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    self_contained: true
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE
+)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#1381B0",
+  secondary_color = "#FF961C",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+## Disclaimer
+
+*  Most of this is copied/adapted from a presentation by Markus Gesmann (https://mages.github.io/R_package_development/#1)
+
+## Useful resources
+
+* Hadley Wickham's book - R packages: https://r-pkgs.org/
+
+* Markus Gesmann's presentation (see above)
+
+* rOpenSci Packages Guide - https://devguide.ropensci.org/index.html
+
+---
+
+## Why start to develop R packages
+
+*  Fed up with copy and paste, or even source
+
+*  Want to share code with others  
+
+*  R files are a mess  
+
+*  Need structure and a guiding framework  
+
+*  Eventually: Publication of methods/functions  
+
+*  In the future you will value your past documentation and discipline  
+
+--
+
+## Challenges
+
+*  Lots of R files, mixing scripts and functions  
+
+*  Very little documentation  
+
+*  Few examples  
+
+*  No tests  
+
+---
+
+## Why start to develop R packages
+
+*  Fed up with copy and paste, or even source  
+*  Want to share code with others  
+*  R files are a mess  
+*  Need structure and a guiding framework  
+*  Eventually: Publication of methods/functions  
+*  In the future you will value your past documentation and discipline  
+
+## In an ideal world
+
+*  Write small functions  
+*  Name them properly  
+*  Document them immediately  
+*  Include self contained examples  
+*  Use a version control system (Git)  
+*  Start writing a vignette  
+
+---
+
+## What is an R package?
+
+*  A collection of files
+
+*  Installed packages live in a folder called library 
+
+    - There are global and local library folders
+    
+*  library(myPackage) will load package functions into memory
+
+*  Auto-completion for package functions becomes available
+
+---
+
+## What is R package development about?
+
+*  A structured framework for R development
+*  Best practice
+*  Minimum checks and testing
+*  A cycle of
+    - R CMD BUILD myPackage
+    - R CMD CHECK myPackage_Version.tar.gz
+    - R CMD INSTALL
+
+--
+
+## What do you need to get started?
+
+*  Windows: R, Rtools, TeX, qpdf
+*  R packages: 
+
+```{r eval=FALSE}
+install.packages(c("devtools", "usethis", "roxygen2", "testthat", "knitr"))
+```
+
+See RStudio Support for more info: https://support.rstudio.com/hc/en-us/articles/200486498-Package-Development-Prerequisites
+
+---
+
+## R package structure
+
+*  DESCRIPTION
+
+*  NAMESPACE
+
+*  README.md
+
+*  .Rbuildignore
+
+*  Sub-directories:
+
+      - mandatory: R, man
+      
+      - optional: data, data-raw, extdata, vignettes, ...
+
+---
+
+## DESCRIPTION
+
+The DESCRIPTION file contains basic information about the package in the following format:
+
+```{r eval=FALSE}
+Package: pkgname
+Version: 0.5-1
+Date: 2015-01-01
+Title: My First Collection of Functions
+Authors@R: c(person("Joe", "Developer", role = c("aut", "cre"), 
+                    email = "Joe.Developer@some.domain.net"),
+            person("A.", "User", role = "ctb"))
+Author: Joe Developer [aut, cre], A. User [ctb]
+Maintainer: Joe Developer <Joe.Developer@some.domain.net>
+Depends: R (>= 3.1.0), nlme
+Suggests: MASS
+Description: A (one paragraph) description of what the package does and why it may be useful.
+License: GPL (>= 2)
+URL: https://www.r-project.org, http://www.another.url
+BugReports: https://pkgname.bugtracker.url
+```
+
+---
+
+## NAMESPACE
+
+*  R has a namespace management system for code in packages
+*  This system allows the package writer to specify 
+    - which variables in the package should be exported to make them available to package users,
+    - which variables should be imported from other packages.
+
+--
+
+### NAMESPACE Example file
+
+```{r eval=FALSE}
+importFrom(grDevices)     
+importFrom(utils, packageDescription)        
+importFrom("RJSONIO", "toJSON")
+# User functions
+export(gvisMotionChart, gvisTable, gvisGeoMap,gvisTreeMap,gvisMap, gvisAnnotatedTimeLine)        
+export(gvisScatterChart, gvisPieChart, gvisOrgChart, gvisIntensityMap)       
+export(plot.gvis, renderGvis)
+# Methods        
+S3method(plot, gvis)         
+S3method(print, gvis)
+```
+
+---
+
+## NAMESPACE
+
+*  R has a namespace management system for code in packages
+*  This system allows the package writer to specify 
+    - which variables in the package should be exported to make them available to package users,
+    - which variables should be imported from other packages.
+
+### NAMESPACE Example file
+
+* NAMESPACE files can also be automatically generated with roxygen2:
+
+```{r eval=FALSE}
+# Generated by roxygen2: do not edit by hand
+
+export(gvisMotionChart)
+export(plot.gvis, renderGvis)
+```
+
+---
+
+## R files
+
+*   located in **R/** directory
+
+*   Should only contain R functions
+
+*   Of course, they should have plenty of inline comments
+
+*   Every function, which is exported to the user needs to be documented in a help file
+
+---
+
+## Writing R help files
+
+*  R help (.Rd) files live in the **man/** directory
+
+*  Format is a mixture of LaTeX and HTML
+
+*  Structure is always the same, only some sections are mandatory
+
+*  Functions are categorised by R keywords
+
+*  R CMD CHECK checks that
+
+    - all user functions are documented
+    
+    - all arguments are listed
+    
+    - all examples work
+    
+    - Rd-format is valid
+
+---
+
+## Writing R help files
+
+*  Maintaining R and Rd files separately requires discipline
+
+*  Instead, write documentation into R file, on top of your function
+
+*  Let roxygen2 extract the documentation and generate the .Rd-files
+
+---
+
+### hello.R
+
+```{r eval=F}
+#' Hello World function
+#'
+#' Say Hello
+#' 
+#' This function is a basic Hello World function in R. It uses the
+#' \code{\link{paste}} function to say hello to someone.
+#' 
+#' @param name. Default is set to 'World'.
+#' @author Markus Gesmann 
+#' @keywords print
+#' @seealso \code{\link{paste}} 
+#' @export
+#' @examples
+#'  hello()
+#'  hello(c("Alice", "Bob")
+
+hello <- function(name="World"){
+  paste("Hello", name)
+}
+```
+
+---
+
+### Vignettes
+
+*  A vignette is a long-form guide to your package. 
+*  Function documentation is great if you know the name of the function you need, but it’s useless otherwise. 
+*  A vignette describes the problem that your package is designed to solve, and then show the reader how to solve it. 
+*  It should divide functions into useful categories, and demonstrate how to coordinate multiple functions to solve problems. 
+
+* Each vignette stats with a meta-data YAML header:
+
+```{r eval=F}
+---
+title: "Vignette Title"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+```
+
+* And the rest is just a simple .Rmd (R markdown) document.
+
+---
+
+## Creating your own package - Step by step
+
+*  Come up with a name
+
+--
+
+*  Create a repository with this name on Github
+
+--
+
+*  Clone the repository to your computer
+
+--
+
+*  Turn repository into a package: 
+
+```{r, eval = F}
+usethis::create_package("path/to/package/pkgname")
+```
+
+This creates an **R/** directory, a basic DESCRIPTION and a basic NAMESPACE file.
+
+--
+
+*  Add a README: 
+
+```{r, eval = F} 
+usethis::use_readme_rmd()
+```
+
+This creates a template README.Rmd file in the root directory of your package.
+Add important information to your README (i.e. How can someone install the package?, What is the purpose of it?, How can someone access the required information?)
+
+---
+
+## Creating your own package - Step by step
+
+*  Set up your package to work with roxygen2: 
+
+```{r, eval = F}
+usethis::use_roxygen_md()
+```
+--
+
+*  If you are using pipes, add pipe operator to your package: 
+
+```{r, eval = F}
+usethis::use_pipe()
+```
+--
+
+* Add documented R function to your package
+
+--
+
+*  Create your first vignette, run:
+
+```{r eval=F}
+usethis::use_vignette("my-vignette")
+```
+
+This creates a **vignettes/** directory, add the necessary dependencies to the DESCRIPTION file and drafts a vignette, vignettes/my-vignette.Rmd.
+
+---
+
+## Creating your own package - Step by step
+
+--
+
+*  Add additional directories (i.e. data-raw, data, extdata), if needed
+
+* Add data to the data directory:
+
+```{r, eval=F}
+# Load data
+arcade <- readr::read_csv("~/path/to/data/arcade.csv")
+```
+
+add data to R package directory:
+
+```{r, eval=F}
+usethis::use_data(arcade, compress = "xz")
+```
+
+---
+
+## Creating your own package - Step by step
+
+*  Add a little script (data.R) that will allow users of your package to load the data:
+
+```{r, eval=F}
+#' List of highest-grossing games
+#'
+#' Source: https://en.wikipedia.org/wiki/Arcade_game#List_of_highest-grossing_games
+#'
+#' @format A data frame with 6 variables: \code{game}, \code{release_year},
+#'   \code{hardware_units_sold}, \code{comment_hardware}, \code{estimated_gross_revenue}, 
+#'   \code{comment_revenue}
+#' \describe{
+#' \item{game}{The name of the game}
+#' \item{release_year}{The year the game was released}
+#' \item{hardware_units_sold}{The amount of hardware units sold}
+#' \item{comment_hardware}{Comment accompanying the amount of hardware units sold}
+#' \item{estimated_gross_revenue}{Estimated gross revenue in US$ with 2019 inflation}
+#' \item{comment_revenue}{Comment accompanying the amount of hardware units sold}
+#' }
+"arcade"
+```
+
+
+*  Last but not least: Build, check and test your package!!!
+
+*  And finally upload your package to your repository.
+
+---
+class: center, middle
+
+# That's it, at least for now! ;)
